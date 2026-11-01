@@ -282,7 +282,10 @@ static void walk_get(void) {
     }
 }
 
-// The mouse camera as a right-stick sample, held for the whole presented frame. Under `lock`.
+// The mouse camera as a right-stick sample, held for the whole presented frame. Under `lock`. The sample is divided by
+// the camera speed factor the game runs with (camera_speed.c, cam_speed_applied), which multiplies every right-stick
+// turn rate, so TOTK_MOUSE_SENS alone sets the mouse's speed; below 1 the sample stays within the stick's range, so the
+// mouse's top speed drops with the factor.
 static void mouse_camera(int32_t out[2]) {
     static uint64_t frame = ~0ull, t0;
     static int32_t held[2];
@@ -305,20 +308,23 @@ static void mouse_camera(int32_t out[2]) {
             held[0] = held[1] = 0;   // frames stopped: do not hold a deflection
         }
     }
-    out[0] = held[0];
-    out[1] = held[1];
+    double k = cam_speed_applied(), x = held[0] / k, y = held[1] / k, len = sqrt(x * x + y * y);
+    if (len > STICK_MAX) x *= STICK_MAX / len, y *= STICK_MAX / len;
+    out[0] = (int32_t)lround(x);
+    out[1] = (int32_t)lround(y);
 }
 
-static float stick_dead = -1;              // TOTK_STICK_DEADZONE as a fraction of full deflection; live (cfg_version)
+static float stick_dead[2] = {-1, -1};     // input_pad_deadzone of the left and right stick; live (cfg_version)
 static unsigned stick_dead_seen;
 
-static float stick_dead_get(void) {
+static float stick_dead_get(int s) {
     unsigned ver = cfg_version();
-    if (stick_dead >= 0 && ver == stick_dead_seen) return stick_dead;
-    stick_dead_seen = ver;
-    double v = cfg_double("TOTK_STICK_DEADZONE");
-    stick_dead = (float)(v < 0 ? 0 : v > 50 ? 50 : v) / 100.f;
-    return stick_dead;
+    if (stick_dead[0] < 0 || ver != stick_dead_seen) {
+        stick_dead_seen = ver;
+        stick_dead[0] = input_pad_deadzone(0);
+        stick_dead[1] = input_pad_deadzone(1);
+    }
+    return stick_dead[s];
 }
 
 // One gamepad stick through the dead zone; SDL's Y grows downwards, the Switch's upwards.
@@ -471,10 +477,24 @@ static int pad_read(uint64_t *b, int32_t sl[2], int32_t sr[2]) {
     uint8_t pd[PAD_COUNT] = {0};
     if (!pad_physical(pd)) return 0;
     *b |= input_map_pad_buttons(pd, pad_layout_get());
-    float dead = stick_dead_get();
-    stick(SDL_GAMEPAD_AXIS_LEFTX, SDL_GAMEPAD_AXIS_LEFTY, dead, sl);
-    stick(SDL_GAMEPAD_AXIS_RIGHTX, SDL_GAMEPAD_AXIS_RIGHTY, dead, sr);
+    stick(SDL_GAMEPAD_AXIS_LEFTX, SDL_GAMEPAD_AXIS_LEFTY, stick_dead_get(0), sl);
+    stick(SDL_GAMEPAD_AXIS_RIGHTX, SDL_GAMEPAD_AXIS_RIGHTY, stick_dead_get(1), sr);
     return 1;
+}
+
+int input_pad_stick_percent(double pct[2]) {
+    int ok = 0;
+    pct[0] = pct[1] = 0;
+    plat_mutex_lock(&lock);
+    if (state == 1 && pad && SDL_GamepadConnected(pad)) {   // the game's poll keeps the state fresh (SDL_UpdateGamepads)
+        pct[0] = input_stick_percent(SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFTX),
+                                     SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFTY));
+        pct[1] = input_stick_percent(SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX),
+                                     SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHTY));
+        ok = 1;
+    }
+    plat_mutex_unlock(&lock);
+    return ok;
 }
 
 static void poll_merged(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry) {
