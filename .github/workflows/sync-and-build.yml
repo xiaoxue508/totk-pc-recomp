@@ -79,10 +79,12 @@ jobs:
           include-prerelease: true
 
       - name: Set up MSYS2 (UCRT64)
+        id: msys2
         uses: msys2/setup-msys2@v2
         with:
+          location: 'C:\msys64'
           msystem: UCRT64
-          update: true
+          update: false
           install: >-
             base-devel
             make
@@ -105,6 +107,26 @@ jobs:
             mingw-w64-ucrt-x86_64-shaderc
             mingw-w64-ucrt-x86_64-spirv-tools
 
+      - name: Ensure C:\msys64 junction
+        shell: powershell
+        run: |
+          $msysLoc = "${{ steps.msys2.outputs.msys2-location }}"
+          Write-Host "setup-msys2 reported location: $msysLoc"
+          if ($msysLoc -and (Test-Path $msysLoc)) {
+            if (-not (Test-Path "C:\msys64\usr\bin\make.exe")) {
+              Write-Host "Creating junction from C:\msys64 to $msysLoc..."
+              if (Test-Path "C:\msys64") {
+                cmd /c rmdir /s /q "C:\msys64"
+              }
+              New-Item -ItemType Junction -Path "C:\msys64" -Target $msysLoc
+            }
+          }
+          Write-Host "Testing required MSYS2 binaries in C:\msys64:"
+          if (-not (Test-Path "C:\msys64\usr\bin\bash.exe")) { throw "Missing C:\msys64\usr\bin\bash.exe" }
+          if (-not (Test-Path "C:\msys64\usr\bin\make.exe")) { throw "Missing C:\msys64\usr\bin\make.exe" }
+          if (-not (Test-Path "C:\msys64\ucrt64\bin\clang.exe")) { throw "Missing C:\msys64\ucrt64\bin\clang.exe" }
+          Write-Host "MSYS2 environment verified successfully!"
+
       - name: Set up uv & Python
         uses: astral-sh/setup-uv@v5
 
@@ -116,6 +138,11 @@ jobs:
           uv venv --python 3.14 .venv-py314 || uv venv --python 3.12 .venv-py314
           uv pip install --python .venv-py314/Scripts/python.exe -r tools/requirements-py314.txt || true
           uv pip install --python .venv-py314/Scripts/python.exe -r tools/requirements-installer.txt || true
+
+      - name: Fetch upstream reference repositories
+        shell: bash
+        run: |
+          bash tools/fetch_refs.sh
 
       - name: Build hactool
         shell: bash
