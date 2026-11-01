@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: sync-build-${{ github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   sync:
