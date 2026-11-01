@@ -78,6 +78,14 @@ jobs:
           dotnet-version: '10.0.x'
           include-prerelease: true
 
+      - name: Remove pre-installed MSYS2
+        shell: powershell
+        run: |
+          if (Test-Path "C:\msys64") {
+            Write-Host "Removing pre-installed C:\msys64..."
+            cmd /c rmdir /s /q "C:\msys64"
+          }
+
       - name: Set up MSYS2 (UCRT64)
         id: msys2
         uses: msys2/setup-msys2@v2
@@ -107,25 +115,15 @@ jobs:
             mingw-w64-ucrt-x86_64-shaderc
             mingw-w64-ucrt-x86_64-spirv-tools
 
-      - name: Ensure C:\msys64 junction
+      - name: Verify MSYS2 environment
         shell: powershell
         run: |
           $msysLoc = "${{ steps.msys2.outputs.msys2-location }}"
           Write-Host "setup-msys2 reported location: $msysLoc"
-          if ($msysLoc -and (Test-Path $msysLoc) -and ($msysLoc -ne "C:\msys64")) {
-            if (-not (Test-Path "C:\msys64\usr\bin\make.exe")) {
-              Write-Host "Creating junction from C:\msys64 to $msysLoc..."
-              if (Test-Path "C:\msys64") {
-                cmd /c rmdir /s /q "C:\msys64"
-              }
-              New-Item -ItemType Junction -Path "C:\msys64" -Target $msysLoc
-            }
-          }
-          Write-Host "Testing required MSYS2 binaries in C:\msys64:"
           if (-not (Test-Path "C:\msys64\usr\bin\bash.exe")) { throw "Missing C:\msys64\usr\bin\bash.exe" }
           if (-not (Test-Path "C:\msys64\usr\bin\make.exe")) { throw "Missing C:\msys64\usr\bin\make.exe" }
           if (-not (Test-Path "C:\msys64\ucrt64\bin\clang.exe")) { throw "Missing C:\msys64\ucrt64\bin\clang.exe" }
-          Write-Host "MSYS2 environment verified successfully!"
+          Write-Host "MSYS2 environment verified in C:\msys64!"
 
       - name: Set up uv & Python
         uses: astral-sh/setup-uv@v5
