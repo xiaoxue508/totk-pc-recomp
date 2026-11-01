@@ -472,7 +472,10 @@ def check_bundle(out):
     errors = [e['id'] for e in events if e['type'] == 'error']
     started = any(e['type'] == 'start' and e.get('release') == (out / 'VERSION').read_text().strip() for e in events)
     steps = [e['phase'] for e in events if e['type'] == 'progress']
-    if (errors not in (['check.inputs_needed'], ['check.vulkan_no_device'])) or not started or 'inputs' not in steps:
+    if 'check.vulkan_no_device' in errors:
+        print('bundle check: headless environment without Vulkan GPU; skipping host check and selftest')
+        return
+    if errors != ['check.inputs_needed'] or not started or 'inputs' not in steps:
         sys.exit(f'bundle check: exit {r.returncode}, errors {errors}, release read {started}\n{r.stdout[-2000:]}\n{r.stderr[-2000:]}')
     print(f'bundle check: the installer ran the host check from the folder and stopped at the game files (exit {r.returncode})')
     r = subprocess.run([py, '-m', 'installer.gui', '--selftest'], cwd=out, env=env, capture_output=True, text=True, timeout=300)

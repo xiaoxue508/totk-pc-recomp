@@ -171,8 +171,8 @@ jobs:
           fi
           $PY tools/make_release.py --out build/release/TotK-Setup --zip build/release/TotK-Setup-windows.zip || true
           if [ -d build/release/TotK-Setup ] && [ ! -f build/release/TotK-Setup-windows.zip ]; then
-            echo "Packaging release zip..."
-            (cd build/release && zip -q -r TotK-Setup-windows.zip TotK-Setup)
+            echo "Packaging release zip with python..."
+            python -c "import shutil; shutil.make_archive('build/release/TotK-Setup-windows', 'zip', 'build/release/TotK-Setup')"
           fi
 
       - name: Fallback build launcher if needed
