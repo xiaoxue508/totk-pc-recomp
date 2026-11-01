@@ -76,7 +76,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-          include-prerelease: true
 
       - name: Remove pre-installed MSYS2
         shell: powershell
@@ -153,20 +152,13 @@ jobs:
           .venv/Scripts/python.exe tools/build_xlate.py
 
       - name: Prepare layout metadata
-        shell: bash
+        shell: python
         run: |
-          python -c "
           from pathlib import Path
-          import json
           p = Path('generated/v121')
           p.mkdir(parents=True, exist_ok=True)
-          (p / 'layout.json').write_text(json.dumps([
-              {'name': 'main', 'base': '0x7000000000', 'size': '0x2000000'},
-              {'name': 'subsdk0', 'base': '0x7002000000', 'size': '0x1000000'},
-              {'name': 'sdk', 'base': '0x7003000000', 'size': '0x1000000'}
-          ]))
-          (p / 'layout.h').write_text('#pragma once\n#define MOD_MAIN_BASE 0x7000000000ull\n#define MOD_SUBSDK0_BASE 0x7002000000ull\n#define MOD_SDK_BASE 0x7003000000ull\n#define MOD_COUNT 12\n#define MOD_LIST(X) X(main, MAIN) X(subsdk0, SUBSDK0) X(sdk, SDK)\n')
-          "
+          (p / 'layout.json').write_text('[]\n', encoding='utf-8')
+          (p / 'layout.h').write_text('#pragma once\n#define MOD_MAIN_BASE 0x7000000000ull\n#define MOD_COUNT 12\n#define MOD_LIST(X)\n', encoding='utf-8')
 
       - name: Build and package TotK-Setup
         id: make_release
@@ -180,23 +172,24 @@ jobs:
           $PY tools/make_release.py --out build/release/TotK-Setup --zip build/release/TotK-Setup-windows.zip || true
 
       - name: Fallback build launcher if needed
-        shell: bash
+        shell: python
         run: |
-          mkdir -p build/release/TotK-Setup
-          if [ ! -f build/release/TotK-Setup/TotK-Setup.exe ]; then
-            echo "Building launcher directly with clang..."
-            python -c "
-            from pathlib import Path
-            import json
-            text = json.loads(Path('installer/text/en.json').read_text(encoding='utf-8'))
-            lines = ['#pragma once']
-            for k, v in text.items():
-                if k.startswith('launcher.'):
-                    lines.append(f'#define MSG_{k[9:].upper()} L\"{v}\"')
-            Path('build/launcher_text.h').write_text('\n'.join(lines), encoding='utf-8')
-            "
-            C:/msys64/ucrt64/bin/clang.exe -mwindows -O2 -Ibuild -Iinstaller installer/launcher/launcher.c -o build/release/TotK-Setup/TotK-Setup.exe || true
-          fi
+          from pathlib import Path
+          import json, subprocess
+          out_exe = Path('build/release/TotK-Setup/TotK-Setup.exe')
+          if not out_exe.is_file():
+              print("Building launcher directly with clang...")
+              out_exe.parent.mkdir(parents=True, exist_ok=True)
+              text = json.loads(Path('installer/text/en.json').read_text(encoding='utf-8'))
+              lines = ['#pragma once']
+              for k, v in text.items():
+                  if k.startswith('launcher.'):
+                      lines.append(f'#define MSG_{k[9:].upper()} L"{v}"')
+              Path('build').mkdir(exist_ok=True)
+              Path('build/launcher_text.h').write_text('\n'.join(lines), encoding='utf-8')
+              cmd = ['C:/msys64/ucrt64/bin/clang.exe', '-mwindows', '-O2', '-Ibuild', '-Iinstaller',
+                     'installer/launcher/launcher.c', '-o', str(out_exe)]
+              subprocess.run(cmd, check=False)
 
       - name: Upload TotK-Setup release package
         uses: actions/upload-artifact@v4
