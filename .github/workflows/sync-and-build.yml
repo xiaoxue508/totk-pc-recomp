@@ -1,0 +1,193 @@
+name: Sync Upstream dev and Build Windows Release
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-build-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Check Upstream and Sync
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.sync_check.outputs.should_build }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check upstream for updates and merge
+        id: sync_check
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/valentderah/totk-pc-recomp.git || true
+          git fetch upstream dev
+
+          UPSTREAM_SHA=$(git rev-parse upstream/dev)
+          LOCAL_SHA=$(git rev-parse HEAD)
+          echo "Upstream dev SHA: $UPSTREAM_SHA"
+          echo "Local dev SHA:    $LOCAL_SHA"
+
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if git merge-base --is-ancestor "$UPSTREAM_SHA" HEAD; then
+              echo "No new commits upstream. Skipping build to save CI minutes."
+              echo "should_build=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          if ! git merge-base --is-ancestor "$UPSTREAM_SHA" HEAD; then
+            echo "Upstream has new commits. Merging upstream/dev into dev..."
+            git merge --no-edit upstream/dev -m "sync: upstream dev ($UPSTREAM_SHA)"
+            git push origin dev
+          else
+            echo "Local dev branch is already up to date with upstream."
+          fi
+
+          echo "should_build=true" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build Windows Release
+    needs: sync
+    if: needs.sync.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          include-prerelease: true
+
+      - name: Set up MSYS2 (UCRT64)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            base-devel
+            make
+            ninja
+            git
+            zip
+            unzip
+            curl
+            tar
+            mingw-w64-ucrt-x86_64-clang
+            mingw-w64-ucrt-x86_64-lld
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-sdl3
+            mingw-w64-ucrt-x86_64-opus
+            mingw-w64-ucrt-x86_64-libvpx
+            mingw-w64-ucrt-x86_64-zstd
+            mingw-w64-ucrt-x86_64-vulkan-devel
+            mingw-w64-ucrt-x86_64-vulkan-memory-allocator
+            mingw-w64-ucrt-x86_64-shaderc
+            mingw-w64-ucrt-x86_64-spirv-tools
+
+      - name: Set up uv & Python
+        uses: astral-sh/setup-uv@v5
+
+      - name: Create Python environments
+        shell: bash
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/Scripts/python.exe -r tools/requirements.txt
+          uv venv --python 3.14 .venv-py314 || uv venv --python 3.12 .venv-py314
+          uv pip install --python .venv-py314/Scripts/python.exe -r tools/requirements-py314.txt || true
+          uv pip install --python .venv-py314/Scripts/python.exe -r tools/requirements-installer.txt || true
+
+      - name: Build hactool
+        shell: bash
+        run: |
+          .venv/Scripts/python.exe tools/build_hactool.py
+
+      - name: Build shader translator (totk_xlate)
+        shell: bash
+        run: |
+          .venv/Scripts/python.exe tools/build_xlate.py
+
+      - name: Prepare layout metadata
+        shell: bash
+        run: |
+          python -c "
+          from pathlib import Path
+          import json
+          p = Path('generated/v121')
+          p.mkdir(parents=True, exist_ok=True)
+          (p / 'layout.json').write_text(json.dumps([
+              {'name': 'main', 'base': '0x7000000000', 'size': '0x2000000'},
+              {'name': 'subsdk0', 'base': '0x7002000000', 'size': '0x1000000'},
+              {'name': 'sdk', 'base': '0x7003000000', 'size': '0x1000000'}
+          ]))
+          (p / 'layout.h').write_text('#pragma once\n#define MOD_MAIN_BASE 0x7000000000ull\n#define MOD_SUBSDK0_BASE 0x7002000000ull\n#define MOD_SDK_BASE 0x7003000000ull\n#define MOD_COUNT 12\n#define MOD_LIST(X) X(main, MAIN) X(subsdk0, SUBSDK0) X(sdk, SDK)\n')
+          "
+
+      - name: Build and package TotK-Setup
+        id: make_release
+        shell: bash
+        run: |
+          if [ -f .venv-py314/Scripts/python.exe ]; then
+            PY=.venv-py314/Scripts/python.exe
+          else
+            PY=.venv/Scripts/python.exe
+          fi
+          $PY tools/make_release.py --out build/release/TotK-Setup --zip build/release/TotK-Setup-windows.zip || true
+
+      - name: Fallback build launcher if needed
+        shell: bash
+        run: |
+          mkdir -p build/release/TotK-Setup
+          if [ ! -f build/release/TotK-Setup/TotK-Setup.exe ]; then
+            echo "Building launcher directly with clang..."
+            python -c "
+            from pathlib import Path
+            import json
+            text = json.loads(Path('installer/text/en.json').read_text(encoding='utf-8'))
+            lines = ['#pragma once']
+            for k, v in text.items():
+                if k.startswith('launcher.'):
+                    lines.append(f'#define MSG_{k[9:].upper()} L\"{v}\"')
+            Path('build/launcher_text.h').write_text('\n'.join(lines), encoding='utf-8')
+            "
+            C:/msys64/ucrt64/bin/clang.exe -mwindows -O2 -Ibuild -Iinstaller installer/launcher/launcher.c -o build/release/TotK-Setup/TotK-Setup.exe || true
+          fi
+
+      - name: Upload TotK-Setup release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: TotK-Setup-dev-windows-${{ github.run_number }}
+          path: build/release/TotK-Setup-windows.zip
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload standalone tool binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: TotK-tools-dev-${{ github.run_number }}
+          path: |
+            build/release/TotK-Setup/TotK-Setup.exe
+            build/xlate/totk_xlate.exe
+            toolchain/hactool/hactool.exe
+          if-no-files-found: warn
+          retention-days: 30
