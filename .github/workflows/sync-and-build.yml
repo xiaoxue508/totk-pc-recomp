@@ -82,7 +82,7 @@ jobs:
         id: msys2
         uses: msys2/setup-msys2@v2
         with:
-          location: 'C:\msys64'
+          location: 'C:\'
           msystem: UCRT64
           update: false
           install: >-
@@ -112,7 +112,7 @@ jobs:
         run: |
           $msysLoc = "${{ steps.msys2.outputs.msys2-location }}"
           Write-Host "setup-msys2 reported location: $msysLoc"
-          if ($msysLoc -and (Test-Path $msysLoc)) {
+          if ($msysLoc -and (Test-Path $msysLoc) -and ($msysLoc -ne "C:\msys64")) {
             if (-not (Test-Path "C:\msys64\usr\bin\make.exe")) {
               Write-Host "Creating junction from C:\msys64 to $msysLoc..."
               if (Test-Path "C:\msys64") {
