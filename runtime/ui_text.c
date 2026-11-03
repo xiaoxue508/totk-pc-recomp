@@ -55,7 +55,7 @@ static const char *const text_en[UI_TEXT_COUNT] = {
     [UI_MENU_OUTPUT_RES] = "Game resolution",
     [UI_MENU_OUTPUT_RES_DESC] = "The size the game draws its picture and interface in. Above 1920 x 1080 the game needs "
                                 "more video memory and GPU time. A wider size (21:9) widens the camera's view and moves "
-                                "the HUD to the screen's corners; a taller one (16:10, Steam Deck) moves it to the top "
+                                "the HUD to the screen's corners; a taller one (16:10, 3:2) moves it to the top "
                                 "and bottom edges.",
     [UI_MENU_RENDER_SCALE] = "3D render scale",
     [UI_MENU_RENDER_SCALE_DESC] = "Size of the 3D scene relative to the game resolution; the game's FSR scales it to "
@@ -359,7 +359,7 @@ static const char *const text_en[UI_TEXT_COUNT] = {
     [UI_MENU_MEMORY_VERIFY] = "Verify",
     [UI_MENU_TEX_ALIAS] = "Texture aliasing", [UI_MENU_TEX_ALIAS_DESC] = "A new texture created over a live texture's memory starts with that content instead of empty.",
     [UI_MENU_TEX_VRAM_PRESSURE] = "Texture memory limit", [UI_MENU_TEX_VRAM_PRESSURE_DESC] = "Percent of video memory above which textures the game released are dropped (they come back from storage when used again). 0 keeps them.",
-    [UI_MENU_ASTC_BC] = "Compress ASTC to BC3", [UI_MENU_ASTC_BC_DESC] = "With the GPU decoder: re-encodes decoded ASTC textures to BC3, a quarter of the video memory. For GPUs with 4 GB or less; textures look slightly blockier.",
+    [UI_MENU_ASTC_BC] = "Compress ASTC to BC3", [UI_MENU_ASTC_BC_DESC] = "With the GPU decoder: re-encodes decoded ASTC textures to BC3, a quarter of the video memory. Textures look slightly blockier. Auto: on for GPUs with 4 GB of video memory or less.",
     [UI_MENU_LOD_GUARD] = "LOD guard", [UI_MENU_LOD_GUARD_DESC] = "Prevents objects flashing in the wrong place or a flat far field for a frame, by waiting for the game to finish rewriting level-of-detail data before the GPU reads it.",
     [UI_MENU_FIX_C0] = "Constant buffer fix",
     [UI_MENU_FIX_C0_DESC] = "Fills the driver-reserved constant bank c0 (storage sizes, dispatch size, point size, base instance) instead of reading zeros.",
@@ -483,7 +483,7 @@ static const char *const text_ru[UI_TEXT_COUNT] = {
     [UI_MENU_OUTPUT_RES] = "Разрешение игры",
     [UI_MENU_OUTPUT_RES_DESC] = "Размер, в котором игра рисует картинку и интерфейс. Выше 1920 × 1080 игре нужно больше "
                                 "видеопамяти и времени GPU. Более широкий размер (21:9) расширяет обзор камеры и "
-                                "переносит интерфейс в углы экрана, более высокий (16:10, Steam Deck) переносит его к "
+                                "переносит интерфейс в углы экрана, более высокий (16:10, 3:2) переносит его к "
                                 "верхнему и нижнему краям.",
     [UI_MENU_RENDER_SCALE] = "Масштаб 3D-отрисовки",
     [UI_MENU_RENDER_SCALE_DESC] = "Размер 3D-сцены относительно разрешения игры; FSR игры доводит её до этого размера. "
@@ -789,7 +789,7 @@ static const char *const text_ru[UI_TEXT_COUNT] = {
     [UI_MENU_MEMORY_VERIFY] = "Проверка",
     [UI_MENU_TEX_ALIAS] = "Наследование содержимого текстур", [UI_MENU_TEX_ALIAS_DESC] = "Новая текстура поверх памяти живой текстуры получает её содержимое, а не пустую.",
     [UI_MENU_TEX_VRAM_PRESSURE] = "Предел памяти текстур", [UI_MENU_TEX_VRAM_PRESSURE_DESC] = "Процент видеопамяти, выше которого освобождённые игрой текстуры удаляются (при повторном использовании загружаются снова). 0 — не удалять.",
-    [UI_MENU_ASTC_BC] = "Сжатие ASTC в BC3", [UI_MENU_ASTC_BC_DESC] = "С декодером на GPU: декодированные текстуры ASTC пересжимаются в BC3 и занимают вчетверо меньше видеопамяти. Для видеокарт с 4 ГБ и меньше; текстуры чуть более блочные.",
+    [UI_MENU_ASTC_BC] = "Сжатие ASTC в BC3", [UI_MENU_ASTC_BC_DESC] = "С декодером на GPU: декодированные текстуры ASTC пересжимаются в BC3 и занимают вчетверо меньше видеопамяти. Текстуры чуть более блочные. Авто: включено на видеокартах с 4 ГБ видеопамяти и меньше.",
     [UI_MENU_LOD_GUARD] = "Защита LOD", [UI_MENU_LOD_GUARD_DESC] = "Не даёт объектам мелькать не на своём месте, а дальнему плану — на кадр становиться плоским: ждёт, пока игра допишет данные уровней детализации, и только потом их читает GPU.",
     [UI_MENU_FIX_C0] = "Исправление константного буфера",
     [UI_MENU_FIX_C0_DESC] = "Заполняет зарезервированный драйвером банк констант c0 (размеры хранилищ, размер запуска, размер точки, базовый экземпляр) вместо чтения нулей.",
@@ -945,7 +945,7 @@ static const char *const text_pt_br[UI_TEXT_COUNT] = {
     [UI_MENU_OUTPUT_RES] = "Resolução do jogo",
     [UI_MENU_OUTPUT_RES_DESC] = "O tamanho em que o jogo desenha a imagem e a interface. Acima de 1920 x 1080 o jogo "
                                 "precisa de mais memória de vídeo e tempo de GPU. Um tamanho mais largo (21:9) amplia a "
-                                "visão da câmera e leva o HUD para os cantos da tela; um mais alto (16:10, Steam Deck) "
+                                "visão da câmera e leva o HUD para os cantos da tela; um mais alto (16:10, 3:2) "
                                 "leva-o para as bordas de cima e de baixo.",
     [UI_MENU_RENDER_SCALE] = "Escala da renderização 3D",
     [UI_MENU_RENDER_SCALE_DESC] = "Tamanho da cena 3D em relação à resolução do jogo; o FSR do jogo a amplia até esse "
@@ -1140,7 +1140,7 @@ static const char *const text_pt_br[UI_TEXT_COUNT] = {
     [UI_MENU_MEMORY_VERIFY] = "Verificar",
     [UI_MENU_TEX_ALIAS] = "Aliasing de texturas", [UI_MENU_TEX_ALIAS_DESC] = "Uma textura nova criada sobre a memória de uma textura viva começa com esse conteúdo em vez de vazia.",
     [UI_MENU_TEX_VRAM_PRESSURE] = "Limite de memória de texturas", [UI_MENU_TEX_VRAM_PRESSURE_DESC] = "Porcentagem da memória de vídeo acima da qual as texturas liberadas pelo jogo são descartadas (voltam do armazenamento quando usadas de novo). 0 mantém todas.",
-    [UI_MENU_ASTC_BC] = "Comprimir ASTC em BC3", [UI_MENU_ASTC_BC_DESC] = "Com o decodificador da GPU: recodifica as texturas ASTC decodificadas em BC3, que ocupa um quarto da memória de vídeo. Para GPUs com 4 GB ou menos; as texturas ficam um pouco mais quadriculadas.",
+    [UI_MENU_ASTC_BC] = "Comprimir ASTC em BC3", [UI_MENU_ASTC_BC_DESC] = "Com o decodificador da GPU: recodifica as texturas ASTC decodificadas em BC3, que ocupa um quarto da memória de vídeo. As texturas ficam um pouco mais quadriculadas. Automático: ligado em GPUs com 4 GB de memória de vídeo ou menos.",
     [UI_MENU_LOD_GUARD] = "Proteção de LOD", [UI_MENU_LOD_GUARD_DESC] = "Evita que objetos pisquem no lugar errado ou que o plano distante fique achatado por um quadro, esperando o jogo terminar de reescrever os dados de nível de detalhe antes que a GPU os leia.",
     [UI_MENU_FIX_C0] = "Correção do buffer de constantes",
     [UI_MENU_FIX_C0_DESC] = "Preenche o banco de constantes c0 reservado ao driver (tamanhos de armazenamento, tamanho do dispatch, tamanho do ponto, instância base) em vez de ler zeros.",
@@ -1419,7 +1419,7 @@ static const char *const text_zh_hans[UI_TEXT_COUNT] = {
     [UI_MENU_OUTPUT_RES_DESC] = "游戏绘制画面和界面的尺寸。"
                                 "高于 1920 x 1080 会占用更多显存和 GPU 时间。"
                                 "更宽的尺寸（21:9）会扩大视野，并把界面移到屏幕四角；"
-                                "更高的尺寸（16:10、Steam Deck）则移到上下边缘。",
+                                "更高的尺寸（16:10、3:2）则移到上下边缘。",
     [UI_MENU_RENDER_SCALE] = "3D 渲染比例",
     [UI_MENU_RENDER_SCALE_DESC] = "3D 场景相对于游戏分辨率的尺寸；"
                                   "游戏的 FSR 会将其缩放到该尺寸。"
@@ -1715,8 +1715,8 @@ static const char *const text_zh_hans[UI_TEXT_COUNT] = {
                                        "再次用到时从存储重新加载。0 表示不丢弃。",
     [UI_MENU_ASTC_BC] = "ASTC 压缩为 BC3",
     [UI_MENU_ASTC_BC_DESC] = "配合 GPU 解码器使用：把解码后的 ASTC 纹理重新编码为 BC3，"
-                             "显存占用只有四分之一。适用于 4 GB 及以下的显卡；"
-                             "纹理会出现轻微色块。",
+                             "显存占用只有四分之一。纹理会出现轻微色块。"
+                             "自动：显存 4 GB 及以下的显卡上开启。",
     [UI_MENU_LOD_GUARD] = "LOD 保护",
     [UI_MENU_LOD_GUARD_DESC] = "等待游戏改写完细节层次数据后再让 GPU 读取，"
                                "避免物体错位闪现，或远景有一帧变平。",

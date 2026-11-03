@@ -32,8 +32,9 @@
 # A thread waiting for a virtual core interrupts the owner when it runs game code: 1 = on, 2 = priority inheritance
 # without the interrupt, 0 = off (the old scheduling).
 # async_preempt = 1
-# Replay NVN submissions on their own thread, at most one frame behind the game (1 = on). Adds up to a frame of latency.
-# replay_async = 0
+# Replay NVN submissions on their own thread, at most one frame behind the game, 0 or 1. Default: on. Adds up to a
+# frame of latency; 0 replays them on the game thread.
+# replay_async = 1
 # EXPERIMENTAL, THE GAME CRASHES WITH 1. 1 lifts the virtual core gate: guest threads run without the console's limit
 # of one thread per core, and the game keeps per-core data without locks. With 1, 1.2.1 and 1.4.3 crash or hang,
 # usually at start (#212). Keep 0 to play.
@@ -55,13 +56,16 @@
 # pipe_prebuild = 1
 # Threads that translate known shaders at start (1 to 64; default: half the CPU threads, at most 16).
 # prewarm_xlate = 8
-# Vulkan graphics pipeline library, 0 or 1. Default: on, except on AMD's driver for RDNA 1 and 2 (RX 5000 and 6000).
+# Vulkan graphics pipeline library, 0 or 1. Default: on.
 # gpl = 1
 
 # Textures and memory.
 # ASTC texture decoding: native (the GPU's own ASTC support), gpu (a compute shader), cpu, or auto (native when the GPU
 # has it, gpu otherwise).
 # astc = auto
+# With astc = gpu: re-encode the decoded ASTC textures to BC3, a quarter of the video memory, textures slightly blockier,
+# 0 or 1. Default: on when the GPU has less than 5 GB of video memory, off otherwise.
+# astc_bc = 1
 # Game memory shared with the GPU: auto (mirror on a discrete GPU, import on an integrated one), import (host memory
 # imported into Vulkan), mirror (pools used as buffers get a copy in video memory) or verify (mirror plus a check of
 # every copy; slow). On a discrete GPU import can be far slower than mirror, not slightly slower: the GPU reads the
@@ -136,8 +140,9 @@
 # Game resolution: the size the game draws its picture and interface in (1280x720 to 7680x4320). Above 1920x1080 the
 # game's texture heap and memory pool grow with it. Another shape than 16:9, such as 3440x1440 on a 21:9 monitor or
 # the Steam Deck's 1280x800 (16:10), gives the camera's view that shape and lays the HUD out for it. The installer
-# prepares the UI layout for ten sizes: 2560x1080, 3440x1440, 3840x1600, 5120x2160 (21:9), 3840x1080, 5120x1440 (32:9),
-# 1280x800, 1680x1050, 1920x1200 and 2560x1600 (16:10). Any other size
+# prepares the UI layout for fifteen sizes: 2560x1080, 3440x1440, 3840x1600, 5120x2160 (21:9), 3840x1080, 5120x1440
+# (32:9), 1280x800, 1680x1050, 1920x1200, 2560x1600 (16:10), 1920x1280, 2160x1440, 2256x1504, 2880x1920 and 3000x2000
+# (3:2). Any other size
 # gets the camera's view but a 16:9 HUD, stretched over the picture, unless you build its layout with
 # tools/make_romfs_patches.py --aspect WxH. Read at start.
 # output_res = 1920x1080
